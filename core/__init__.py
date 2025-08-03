@@ -1,0 +1,3 @@
+"""
+Fast-Admin Core Package
+"""

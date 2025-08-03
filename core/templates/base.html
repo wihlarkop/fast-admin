@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Fast-Admin{% endblock %}</title>
+
+    <!-- CSS Files -->
+    {% for css_file in css_files %}
+    <link rel="stylesheet" href="{{ css_file }}">
+    {% endfor %}
+
+    <!-- Additional CSS -->
+    {% block extra_css %}{% endblock %}
+
+    <!-- Meta tags -->
+    <meta name="description"
+          content="{% block description %}Fast-Admin - Django-admin-inspired admin panel for FastAPI{% endblock %}">
+    <meta name="robots" content="noindex, nofollow">
+</head>
+<body class="min-h-screen bg-gray-50">
+<!-- Global Loading Indicator -->
+<div class="global-loader"></div>
+
+<!-- Main Layout -->
+<div class="flex min-h-screen">
+    <!-- Sidebar -->
+    {% if show_sidebar|default(true) %}
+    <aside class="admin-sidebar">
+        {% include 'components/sidebar.html' %}
+    </aside>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="admin-content flex-1 flex flex-col">
+        <!-- Top Navigation Bar -->
+        {% include 'components/navbar.html' %}
+
+        <!-- Page Content -->
+        <div class="flex-1 p-6">
+            <!-- Breadcrumbs -->
+            {% if breadcrumbs %}
+            {% include 'components/breadcrumbs.html' %}
+            {% endif %}
+
+            <!-- Messages/Alerts -->
+            {% include 'components/messages.html' %}
+
+            <!-- Page Header -->
+            {% block page_header %}
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-900">
+                    {% block page_title %}Admin{% endblock %}
+                </h1>
+                {% block page_description %}{% endblock %}
+            </div>
+            {% endblock %}
+
+            <!-- Main Content Area -->
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</div>
+
+<!-- JavaScript Files -->
+{% for js_file in js_files %}
+<script src="{{ js_file }}"></script>
+{% endfor %}
+
+<!-- HTMX Configuration now handled by admin.js -->
+
+<!-- Additional JavaScript -->
+{% block extra_js %}{% endblock %}
+
+<!-- Inline Scripts -->
+{% block inline_js %}{% endblock %}
+</body>
+</html>

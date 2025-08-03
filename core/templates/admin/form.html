@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}
+{% if item %}
+Edit {{ model_name.replace('_', ' ').title() }}
+{% else %}
+Add {{ model_name.replace('_', ' ').title() }}
+{% endif %} - Fast-Admin
+{% endblock %}
+
+{% block page_title %}
+{% if item %}
+Edit {{ model_name.replace('_', ' ').title() }}
+{% else %}
+Add {{ model_name.replace('_', ' ').title() }}
+{% endif %}
+{% endblock %}
+
+{% block breadcrumbs %}
+{% set breadcrumbs = [
+    {'title': model_name.replace('_', ' ').title(), 'url': '/admin/' + model_name + '/'},
+    {'title': 'Edit' if item else 'Add'}
+] %}
+{{ super() }}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+    <div class="bg-white shadow rounded-lg">
+        <form 
+            {% if item %}
+            hx-put="/admin/{{ model_name }}/{{ item.id }}/"
+            {% else %}
+            hx-post="/admin/{{ model_name }}/"
+            {% endif %}
+            hx-boost="true"
+            hx-indicator="#form-loading"
+            class="space-y-6 p-6"
+            id="form-container"
+            novalidate
+        >
+            <!-- Loading Indicator -->
+            <div id="form-loading" class="htmx-indicator">
+                <div class="flex items-center justify-center py-4">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    <span class="ml-2 text-sm text-gray-600">Saving...</span>
+                </div>
+            </div>
+            <!-- Form Fields -->
+            {% for field in form_fields %}
+            <div class="form-group">
+                <label for="{{ field.name }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ field.label }}
+                    {% if field.required %}
+                    <span class="text-red-500">*</span>
+                    {% endif %}
+                </label>
+                
+                {% if field.type == 'textarea' %}
+                <textarea 
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    rows="4"
+                    class="form-input"
+                    {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+                    {% if field.required %}required{% endif %}
+                    {% if field.readonly %}readonly{% endif %}
+                    {% if field.max_length %}maxlength="{{ field.max_length }}"{% endif %}
+                >{{ item[field.name] if item else field.default or '' }}</textarea>
+                
+                {% elif field.type == 'checkbox' %}
+                <div class="flex items-center">
+                    <input 
+                        id="{{ field.name }}"
+                        name="{{ field.name }}"
+                        type="checkbox"
+                        value="true"
+                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        {% if field.readonly %}disabled{% endif %}
+                        {% if (item and item[field.name]) or (not item and field.default) %}checked{% endif %}
+                    >
+                    <label for="{{ field.name }}" class="ml-2 text-sm text-gray-600">
+                        {{ field.help_text or field.label }}
+                    </label>
+                </div>
+                
+                {% elif field.type == 'select' %}
+                <select 
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    class="form-input"
+                    {% if field.required %}required{% endif %}
+                    {% if field.readonly %}disabled{% endif %}
+                >
+                    <option value="">Select {{ field.label }}</option>
+                    {% for choice_value, choice_label in field.choices %}
+                    <option value="{{ choice_value }}" 
+                            {% if (item and item[field.name] == choice_value) or (not item and field.default == choice_value) %}selected{% endif %}>
+                        {{ choice_label }}
+                    </option>
+                    {% endfor %}
+                </select>
+                
+                {% elif field.type == 'hidden' %}
+                <!-- Hidden fields are not displayed -->
+                
+                {% else %}
+                <input 
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    type="{{ field.type }}"
+                    class="form-input"
+                    {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+                    {% if field.required %}required{% endif %}
+                    {% if field.readonly %}readonly{% endif %}
+                    {% if field.max_length %}maxlength="{{ field.max_length }}"{% endif %}
+                    {% if field.min_value %}min="{{ field.min_value }}"{% endif %}
+                    {% if field.max_value %}max="{{ field.max_value }}"{% endif %}
+                    value="{{ item[field.name] if item else field.default or '' }}"
+                >
+                {% endif %}
+                
+                <!-- Field Help Text -->
+                {% if field.help_text and field.type != 'checkbox' %}
+                <p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>
+                {% endif %}
+                
+                <!-- Field Error Display -->
+                <div class="text-red-500 text-sm mt-1 hidden" data-error-for="{{ field.name }}"></div>
+            </div>
+            {% endfor %}
+            
+            <!-- Form Actions -->
+            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                <a href="/admin/{{ model_name }}/" class="btn btn-secondary">
+                    Cancel
+                </a>
+                
+                <div class="flex space-x-3">
+                    {% if item %}
+                    <button type="submit" name="action" value="save" class="btn btn-primary">
+                        Save Changes
+                    </button>
+                    <button type="submit" name="action" value="save_and_continue" class="btn btn-secondary">
+                        Save and Continue Editing
+                    </button>
+                    {% else %}
+                    <button type="submit" name="action" value="save" class="btn btn-primary">
+                        Save
+                    </button>
+                    <button type="submit" name="action" value="save_and_add_another" class="btn btn-secondary">
+                        Save and Add Another
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Related Objects (for edit) -->
+    {% if item and related_objects %}
+    <div class="mt-8 space-y-6">
+        {% for related in related_objects %}
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">
+                    {{ related.name.replace('_', ' ').title() }}
+                </h3>
+            </div>
+            
+            <div class="p-6">
+                {% if related.items %}
+                <div class="space-y-2">
+                    {% for rel_item in related.items %}
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                        <span>{{ rel_item.display_name }}</span>
+                        <a href="/admin/{{ related.name }}/{{ rel_item.id }}/" 
+                           class="text-blue-600 hover:text-blue-800 text-sm">
+                            Edit
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500">No {{ related.name.replace('_', ' ') }} found.</p>
+                {% endif %}
+                
+                <div class="mt-4">
+                    <a href="/admin/{{ related.name }}/add/?{{ model_name }}_id={{ item.id }}" 
+                       class="btn btn-secondary btn-sm">
+                        Add {{ related.name.replace('_', ' ').title() }}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

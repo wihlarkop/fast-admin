@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Fast-Admin{% endblock %}
+
+{% block page_title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Welcome Section -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4">
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">Welcome to Fast-Admin</h2>
+            <p class="text-gray-600">
+                Manage your application data with this comprehensive admin interface. 
+                Select a model from the sidebar to get started.
+            </p>
+        </div>
+    </div>
+    
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {% for model_name in registered_models %}
+        <div class="bg-white shadow rounded-lg hover:shadow-md transition-shadow">
+            <div class="p-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <div class="text-sm font-medium text-gray-900">
+                            {{ model_name.replace('_', ' ').title() }}
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            Manage {{ model_name.replace('_', ' ') }} records
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <div class="flex items-center justify-between">
+                        <a href="/admin/{{ model_name }}/" 
+                           class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                            View All
+                        </a>
+                        <a href="/admin/{{ model_name }}/add/" 
+                           class="btn btn-primary btn-sm">
+                            Add New
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Recent Activity (if available) -->
+    {% if recent_activity %}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Recent Activity</h3>
+        </div>
+        <div class="p-6">
+            <div class="flow-root">
+                <ul class="-mb-8">
+                    {% for activity in recent_activity %}
+                    <li>
+                        <div class="relative pb-8">
+                            {% if not loop.last %}
+                            <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></span>
+                            {% endif %}
+                            
+                            <div class="relative flex space-x-3">
+                                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-400">
+                                    <svg class="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+                                
+                                <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                    <div>
+                                        <p class="text-sm text-gray-500">
+                                            {{ activity.action }} in 
+                                            <a href="/admin/{{ activity.model }}/" class="font-medium text-gray-900">
+                                                {{ activity.model.replace('_', ' ').title() }}
+                                            </a>
+                                        </p>
+                                    </div>
+                                    
+                                    <div class="text-right text-sm whitespace-nowrap text-gray-500">
+                                        <time datetime="{{ activity.timestamp.isoformat() }}">
+                                            {{ activity.timestamp.strftime('%H:%M') }}
+                                        </time>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- System Info -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">System Information</h3>
+        </div>
+        <div class="p-6">
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Registered Models</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ registered_models|length }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Admin Version</dt>
+                    <dd class="mt-1 text-sm text-gray-900">Fast-Admin 1.0.0</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %}

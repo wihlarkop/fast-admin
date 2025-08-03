@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.display_name or item.id }} - {{ model_name.replace('_', ' ').title() }} - Fast-Admin{% endblock %}
+
+{% block page_title %}{{ item.display_name or item.id }}{% endblock %}
+
+{% block breadcrumbs %}
+{% set breadcrumbs = [
+{'title': model_name.replace('_', ' ').title(), 'url': '/admin/' + model_name + '/'},
+{'title': item.display_name or item.id}
+] %}
+{{ super() }}
+{% endblock %}
+
+{% block page_actions %}
+<div class="flex space-x-2">
+    <a href="/admin/{{ model_name }}/{{ item.id }}/edit/" class="btn btn-primary">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+        </svg>
+        Edit
+    </a>
+
+    <button
+            hx-delete="/admin/{{ model_name }}/{{ item.id }}/"
+            hx-confirm="Are you sure you want to delete this {{ model_name.replace('_', ' ') }}?"
+            hx-target="body"
+            hx-swap="outerHTML"
+            class="btn btn-danger">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+        </svg>
+        Delete
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Main Details -->
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Details</h3>
+        </div>
+
+        <div class="p-6">
+            <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                {% for field in detail_fields %}
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">
+                        {{ field.replace('_', ' ').title() }}
+                    </dt>
+                    <dd class="mt-1 text-sm text-gray-900">
+                        {% if item[field] is none %}
+                        <span class="text-gray-400">—</span>
+                        {% elif field in ['created_at', 'updated_at', 'date_joined', 'last_login'] %}
+                        <time datetime="{{ item[field].isoformat() if item[field] else '' }}">
+                            {{ item[field].strftime('%Y-%m-%d %H:%M:%S') if item[field] else '—' }}
+                        </time>
+                        {% elif field.endswith('_url') or field.startswith('http') %}
+                        <a href="{{ item[field] }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                            {{ item[field] }}
+                        </a>
+                        {% elif field.endswith('_email') or '@' in (item[field] or '') %}
+                        <a href="mailto:{{ item[field] }}" class="text-blue-600 hover:text-blue-800">
+                            {{ item[field] }}
+                        </a>
+                        {% elif field.endswith('_count') %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {{ item[field] }}
+                        </span>
+                        {% elif item[field] is sameas true %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Yes
+                        </span>
+                        {% elif item[field] is sameas false %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            No
+                        </span>
+                        {% else %}
+                        {{ item[field] }}
+                        {% endif %}
+                    </dd>
+                </div>
+                {% endfor %}
+            </dl>
+        </div>
+    </div>
+
+    <!-- Related Objects -->
+    {% if related_objects %}
+    {% for related in related_objects %}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg font-medium text-gray-900">
+                {{ related.name.replace('_', ' ').title() }}
+                {% if related.count %}
+                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                    {{ related.count }}
+                </span>
+                {% endif %}
+            </h3>
+
+            <a href="/admin/{{ related.name }}/add/?{{ model_name }}_id={{ item.id }}"
+               class="btn btn-primary btn-sm">
+                Add {{ related.name.replace('_', ' ').title() }}
+            </a>
+        </div>
+
+        <div class="p-6">
+            {% if related.items %}
+            <div class="space-y-3">
+                {% for rel_item in related.items %}
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                        <div class="font-medium text-gray-900">
+                            {{ rel_item.display_name or rel_item.id }}
+                        </div>
+                        {% if rel_item.description %}
+                        <div class="text-sm text-gray-500">
+                            {{ rel_item.description }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="flex space-x-2">
+                        <a href="/admin/{{ related.name }}/{{ rel_item.id }}/"
+                           class="text-blue-600 hover:text-blue-800 text-sm">
+                            View
+                        </a>
+                        <a href="/admin/{{ related.name }}/{{ rel_item.id }}/edit/"
+                           class="text-green-600 hover:text-green-800 text-sm">
+                            Edit
+                        </a>
+                        <button
+                                hx-delete="/admin/{{ related.name }}/{{ rel_item.id }}/"
+                                hx-confirm="Are you sure?"
+                                hx-target="closest div"
+                                hx-swap="outerHTML"
+                                class="text-red-600 hover:text-red-800 text-sm">
+                            Delete
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">No {{ related.name.replace('_', ' ') }}</h3>
+                <p class="mt-1 text-sm text-gray-500">Get started by creating a new {{ related.name.replace('_', ' ')
+                    }}.</p>
+                <div class="mt-6">
+                    <a href="/admin/{{ related.name }}/add/?{{ model_name }}_id={{ item.id }}"
+                       class="btn btn-primary">
+                        Add {{ related.name.replace('_', ' ').title() }}
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- History/Audit Log (if available) -->
+    {% if show_history and history %}
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">History</h3>
+        </div>
+
+        <div class="p-6">
+            <div class="flow-root">
+                <ul class="-mb-8">
+                    {% for entry in history %}
+                    <li>
+                        <div class="relative pb-8">
+                            {% if not loop.last %}
+                            <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></span>
+                            {% endif %}
+
+                            <div class="relative flex space-x-3">
+                                <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-400">
+                                    <svg class="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd"
+                                              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                              clip-rule="evenodd"></path>
+                                    </svg>
+                                </div>
+
+                                <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                    <div>
+                                        <p class="text-sm text-gray-500">
+                                            {{ entry.action }} by
+                                            <span class="font-medium text-gray-900">{{ entry.user }}</span>
+                                        </p>
+                                        {% if entry.changes %}
+                                        <div class="mt-2 text-sm text-gray-700">
+                                            <ul class="list-disc list-inside space-y-1">
+                                                {% for change in entry.changes %}
+                                                <li>{{ change }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="text-right text-sm whitespace-nowrap text-gray-500">
+                                        <time datetime="{{ entry.timestamp.isoformat() }}">
+                                            {{ entry.timestamp.strftime('%Y-%m-%d %H:%M') }}
+                                        </time>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Fast-Admin</title>
+    
+    <!-- CSS Files -->
+    {% for css_file in css_files %}
+    <link rel="stylesheet" href="{{ css_file }}">
+    {% endfor %}
+    
+    <!-- Enhanced CSS for login page -->
+    <style>
+        /* Base styles */
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .login-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 1rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 400px;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .icon-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 4rem;
+            height: 4rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 1rem;
+            margin: 0 auto 1.5rem;
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .icon-container svg {
+            width: 2rem;
+            height: 2rem;
+            color: white;
+        }
+        
+        h2 {
+            text-align: center;
+            font-size: 1.875rem;
+            font-weight: 800;
+            color: #111827;
+            margin: 0 0 0.5rem 0;
+        }
+        
+        .subtitle {
+            text-align: center;
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 2rem;
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid;
+            display: flex;
+            align-items: center;
+        }
+        
+        .alert-error {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border-left-color: #dc2626;
+        }
+        
+        .alert-success {
+            background-color: #f0fdf4;
+            color: #16a34a;
+            border-left-color: #16a34a;
+        }
+        
+        .alert svg {
+            width: 1.25rem;
+            height: 1.25rem;
+            margin-right: 0.5rem;
+            flex-shrink: 0;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group:last-of-type {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid #e5e7eb;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            background: #f9fafb;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-input::placeholder {
+            color: #9ca3af;
+        }
+        
+        .input-group .form-input:first-child {
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+            margin-bottom: -2px;
+        }
+        
+        .input-group .form-input:last-child {
+            border-bottom-left-radius: 0.5rem;
+            border-bottom-right-radius: 0.5rem;
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+        }
+        
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 1.5rem 0;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            accent-color: #667eea;
+            margin-right: 0.5rem;
+        }
+        
+        .checkbox-group label {
+            position: static;
+            width: auto;
+            height: auto;
+            margin: 0;
+            overflow: visible;
+            clip: auto;
+            white-space: normal;
+            font-size: 0.875rem;
+            color: #374151;
+        }
+        
+        .forgot-password {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        
+        .forgot-password:hover {
+            color: #764ba2;
+            text-decoration: underline;
+        }
+        
+        .btn-primary {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .btn-primary svg {
+            width: 1.25rem;
+            height: 1.25rem;
+            margin-right: 0.5rem;
+        }
+        
+        .footer-text {
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.75rem;
+            margin-top: 2rem;
+        }
+        
+        @media (max-width: 640px) {
+            .login-container {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+        }
+    </style>
+    
+    <meta name="robots" content="noindex, nofollow">
+</head>
+<body>
+    <div class="login-container">
+        <!-- Header -->
+        <div class="icon-container">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+        </div>
+        
+        <h2>Sign in to Admin</h2>
+        <p class="subtitle">Enter your credentials to access the admin panel</p>
+        
+        <!-- Error Messages -->
+        {% if error %}
+        <div class="alert alert-error">
+            <svg fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+            </svg>
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <!-- Success Messages -->
+        {% if success %}
+        <div class="alert alert-success">
+            <svg fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+            {{ success }}
+        </div>
+        {% endif %}
+        
+        <!-- Login Form -->
+        <form method="POST" action="/admin/login">
+            <input type="hidden" name="remember" value="true">
+            
+            <div class="input-group">
+                <div class="form-group">
+                    <label for="username">Username or Email</label>
+                    <input 
+                        id="username" 
+                        name="username" 
+                        type="text" 
+                        autocomplete="username" 
+                        required 
+                        class="form-input" 
+                        placeholder="Username or email address"
+                        value="{{ username or '' }}"
+                    >
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input 
+                        id="password" 
+                        name="password" 
+                        type="password" 
+                        autocomplete="current-password" 
+                        required 
+                        class="form-input" 
+                        placeholder="Password"
+                    >
+                </div>
+            </div>
+            
+            <div class="checkbox-container">
+                <div class="checkbox-group">
+                    <input 
+                        id="remember-me" 
+                        name="remember-me" 
+                        type="checkbox"
+                    >
+                    <label for="remember-me">Remember me</label>
+                </div>
+                
+                <div>
+                    <a href="#" class="forgot-password">Forgot your password?</a>
+                </div>
+            </div>
+            
+            <div>
+                <button type="submit" class="btn-primary">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
+                    </svg>
+                    Sign in
+                </button>
+            </div>
+        </form>
+        
+        <!-- Footer -->
+        <div class="footer-text">
+            Fast-Admin v1.0.0 - Powered by FastAPI
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script>
+        // Auto-focus first empty field
+        document.addEventListener('DOMContentLoaded', function() {
+            const usernameField = document.getElementById('username');
+            const passwordField = document.getElementById('password');
+            
+            if (!usernameField.value) {
+                usernameField.focus();
+            } else {
+                passwordField.focus();
+            }
+        });
+        
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username) {
+                e.preventDefault();
+                alert('Please enter your username or email address.');
+                document.getElementById('username').focus();
+                return;
+            }
+            
+            if (!password) {
+                e.preventDefault();
+                alert('Please enter your password.');
+                document.getElementById('password').focus();
+                return;
+            }
+        });
+        
+        // Handle login errors with better UX
+        const errorAlert = document.querySelector('.alert-error');
+        if (errorAlert) {
+            // Auto-focus password field on failed login
+            document.getElementById('password').focus();
+            document.getElementById('password').select();
+        }
+    </script>
+</body>
+</html>
