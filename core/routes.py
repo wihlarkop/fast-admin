@@ -38,6 +38,7 @@ class CRUDRouter:
         self.model_name = model_name
         self.is_async = isinstance(engine, AsyncEngine)
         self.form_generator = FormGenerator()
+        self.form_generator.set_engine(engine)
 
         # Get admin configuration
         self.admin_instance = admin_class(table)
@@ -271,10 +272,17 @@ class CRUDRouter:
         self._check_permissions(request, "add")
 
         form_fields = self.form_generator.generate_form_fields(self.table)
+        
+        # Debug form fields
+        for field in form_fields:
+            print(f"DEBUG: Form field: {field.name}, type: {field.field_type}, choices: {field.choices}")
+        
+        # Convert FormField objects to dictionaries
+        form_fields_dict = [field.to_dict() for field in form_fields]
 
         context = self._get_template_context(request, {
             'model_name': self.model_name,
-            'form_fields': form_fields,
+            'form_fields': form_fields_dict,
             'item': None,
         })
 
@@ -327,10 +335,13 @@ class CRUDRouter:
         except Exception as e:
             # Return form with errors
             form_fields = self.form_generator.generate_form_fields(self.table)
+            
+            # Convert FormField objects to dictionaries
+            form_fields_dict = [field.to_dict() for field in form_fields]
 
             context = self._get_template_context(request, {
                 'model_name': self.model_name,
-                'form_fields': form_fields,
+                'form_fields': form_fields_dict,
                 'item': None,
                 'errors': {'form': str(e)},
             })
@@ -394,10 +405,13 @@ class CRUDRouter:
                 raise HTTPException(status_code=404, detail="Item not found")
 
             form_fields = self.form_generator.generate_form_fields(self.table, for_update=True)
+            
+            # Convert FormField objects to dictionaries
+            form_fields_dict = [field.to_dict() for field in form_fields]
 
             context = self._get_template_context(request, {
                 'model_name': self.model_name,
-                'form_fields': form_fields,
+                'form_fields': form_fields_dict,
                 'item': item,
             })
 
@@ -458,6 +472,9 @@ class CRUDRouter:
         except Exception as e:
             # Return form with errors
             form_fields = self.form_generator.generate_form_fields(self.table, for_update=True)
+            
+            # Convert FormField objects to dictionaries
+            form_fields_dict = [field.to_dict() for field in form_fields]
 
             # Get current item for form
             query = select(self.table).where(eq(self.table.c.id, item_id))
@@ -474,7 +491,7 @@ class CRUDRouter:
 
             context = self._get_template_context(request, {
                 'model_name': self.model_name,
-                'form_fields': form_fields,
+                'form_fields': form_fields_dict,
                 'item': item,
                 'errors': {'form': str(e)},
             })

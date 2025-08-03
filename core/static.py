@@ -41,12 +41,8 @@ class StaticFileHandler:
         """Get list of CSS files to include in templates."""
         css_files = []
 
-        # TailwindCSS (required)
-        tailwind_file = self.css_dir / "tailwind.min.css"
-        if tailwind_file.exists():
-            css_files.append("/admin/static/css/tailwind.min.css")
-            
-        # Admin CSS (required)
+        # TailwindCSS v4 uses JavaScript, not CSS files
+        # Only include admin.css for any custom styles
         admin_css_file = self.css_dir / "admin.css"
         if admin_css_file.exists():
             css_files.append("/admin/static/css/admin.css")

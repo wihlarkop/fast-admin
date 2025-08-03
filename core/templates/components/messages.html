@@ -2,7 +2,7 @@
 {% if messages %}
 <div class="mb-6 space-y-3">
     {% for message in messages %}
-    <div class="alert alert-{{ message.type }} flex items-center justify-between" role="alert">
+    <div class="p-4 rounded-lg border-l-4 flex items-center justify-between {% if message.type == 'success' %}bg-green-50 border-green-500 text-green-700{% elif message.type == 'error' %}bg-red-50 border-red-500 text-red-700{% elif message.type == 'warning' %}bg-yellow-50 border-yellow-500 text-yellow-700{% else %}bg-blue-50 border-blue-500 text-blue-700{% endif %}" role="alert">
         <div class="flex items-center">
             {% if message.type == 'success' %}
             <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">

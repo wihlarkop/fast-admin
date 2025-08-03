@@ -9,10 +9,10 @@ This module provides functionality to automatically generate:
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Type
+from typing import Any, Type, Dict, List, Tuple
 
 from pydantic import BaseModel, create_model, Field
-from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Table, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Table, Text, select
 
 
 class FormFieldType(str, Enum):
@@ -90,6 +90,93 @@ class FormGenerator:
             DateTime: (datetime, FormFieldType.DATETIME),
             Float: (float, FormFieldType.NUMBER),
         }
+        self.engine = None
+        
+    def set_engine(self, engine):
+        """Set the database engine for fetching related data."""
+        self.engine = engine
+        print(f"DEBUG: Engine set in FormGenerator: {engine}")
+        
+    def get_related_choices(self, foreign_key) -> list[tuple[Any, str]]:
+        """
+        Fetch related data for a foreign key to populate dropdown choices.
+        
+        Returns a list of tuples (id, display_value) for the dropdown.
+        """
+        print(f"DEBUG: get_related_choices called for {foreign_key}")
+        
+        if not self.engine:
+            print("DEBUG: No engine set, returning empty choices")
+            return []
+            
+        # Get the target table and column
+        target_table_name = foreign_key.target_fullname.split('.')[0]
+        print(f"DEBUG: Target table name: {target_table_name}")
+        
+        # Check if target table exists in metadata
+        if target_table_name not in foreign_key.column.table.metadata.tables:
+            print(f"DEBUG: Target table {target_table_name} not found in metadata")
+            return []
+            
+        target_table = foreign_key.column.table.metadata.tables[target_table_name]
+        print(f"DEBUG: Target table columns: {[c.name for c in target_table.columns]}")
+        
+        # Build a query to get id and a display field
+        # Try to find a good display field (name, title, etc.)
+        display_fields = ['name', 'title', 'label', 'username', 'email', 'description']
+        display_field = None
+        
+        for field in display_fields:
+            if field in target_table.columns:
+                display_field = field
+                print(f"DEBUG: Found display field: {field}")
+                break
+                
+        # If no good display field found, use the primary key
+        if not display_field:
+            primary_key_cols = list(target_table.primary_key.columns)
+            if primary_key_cols:
+                display_field = primary_key_cols[0].name
+                print(f"DEBUG: Using primary key as display field: {display_field}")
+            else:
+                print("DEBUG: No primary key found, using first column")
+                display_field = list(target_table.columns)[0].name
+            
+        # Build and execute the query
+        primary_key_col = list(target_table.primary_key.columns)[0] if target_table.primary_key.columns else list(target_table.columns)[0]
+        
+        query = select(
+            target_table.c[primary_key_col.name],
+            target_table.c[display_field]
+        ).order_by(target_table.c[display_field])
+        print(f"DEBUG: Query: {query}")
+        
+        try:
+            # Check if engine is async
+            from sqlalchemy.ext.asyncio import AsyncEngine
+            is_async = isinstance(self.engine, AsyncEngine)
+            
+            if is_async:
+                # For async engines, we need to use a sync_engine from pool
+                # This is a workaround since form generation happens in sync context
+                sync_engine = self.engine.sync_engine if hasattr(self.engine, 'sync_engine') else self.engine
+                with sync_engine.connect() as conn:
+                    result = conn.execute(query)
+                    choices = [(row[0], str(row[1])) for row in result]
+                    print(f"DEBUG: Retrieved {len(choices)} choices")
+                    return choices
+            else:
+                # For synchronous engines
+                with self.engine.connect() as conn:
+                    result = conn.execute(query)
+                    choices = [(row[0], str(row[1])) for row in result]
+                    print(f"DEBUG: Retrieved {len(choices)} choices")
+                    return choices
+        except Exception as e:
+            print(f"ERROR: Failed to fetch related choices: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
 
     def get_python_type_and_field_type(self, column: Column) -> tuple[Type, FormFieldType]:
         """Map SQLAlchemy column type to Python type and HTML field type."""
@@ -114,7 +201,27 @@ class FormGenerator:
     def create_form_field(self, column: Column) -> FormField:
         """Create a FormField from SQLAlchemy column."""
         python_type, field_type = self.get_python_type_and_field_type(column)
-
+        
+        # Check if column is a foreign key
+        choices = []
+        if column.foreign_keys:
+            print(f"DEBUG: Foreign key detected for column {column.name}")
+            field_type = FormFieldType.SELECT
+            
+            # Get the first foreign key (usually there's only one)
+            foreign_key = next(iter(column.foreign_keys))
+            print(f"DEBUG: Foreign key target: {foreign_key.target_fullname}")
+            
+            # Get choices for the dropdown
+            related_choices = self.get_related_choices(foreign_key)
+            print(f"DEBUG: Retrieved {len(related_choices)} choices for {column.name}")
+            
+            # Add an empty option for nullable fields at the beginning
+            if column.nullable:
+                choices = [('', '-- Select --')] + related_choices
+            else:
+                choices = related_choices
+            
         # Determine if field is required
         required = not column.nullable and column.default is None and not column.primary_key
 
@@ -129,6 +236,8 @@ class FormGenerator:
             placeholder = f"Enter {column.name.replace('_', ' ').lower()}"
         elif field_type == FormFieldType.TEXTAREA:
             placeholder = f"Enter {column.name.replace('_', ' ').lower()}..."
+        elif field_type == FormFieldType.SELECT and not choices:
+            placeholder = f"Select {column.name.replace('_', ' ').lower()}"
 
         # Determine if field should be readonly
         readonly = (
@@ -140,13 +249,21 @@ class FormGenerator:
         if 'password' in column.name.lower():
             field_type = FormFieldType.HIDDEN
 
+        # Generate help text for foreign key fields
+        help_text = None
+        if column.foreign_keys:
+            target_table = next(iter(column.foreign_keys)).target_fullname.split('.')[0]
+            help_text = f"Select a related {target_table.replace('_', ' ')}"
+
         return FormField(
             name=column.name,
             field_type=field_type,
             required=required,
             placeholder=placeholder,
+            help_text=help_text,
             max_length=max_length,
             readonly=readonly,
+            choices=choices,
         )
 
     def generate_form_fields(
@@ -163,6 +280,13 @@ class FormGenerator:
 
         # Auto-exclude certain fields
         auto_exclude = ['id'] if 'id' in [col.name for col in table.columns] else []
+        
+        # Exclude timestamp fields when adding new data (not for update)
+        if not for_update:
+            timestamp_fields = ['created_at', 'updated_at', 'date_joined', 'last_login', 'assigned_at']
+            auto_exclude.extend([field for field in timestamp_fields 
+                               if field in [col.name for col in table.columns]])
+        
         exclude.extend(auto_exclude)
 
         fields = []
@@ -200,10 +324,10 @@ class FormGenerator:
         # Auto-exclude certain fields based on operation type
         if for_update:
             # For updates, exclude timestamp fields but allow other fields
-            auto_exclude = ['created_at', 'date_joined']
+            auto_exclude = ['created_at', 'date_joined', 'assigned_at']
         else:
             # For creates, exclude ID and all timestamp fields
-            auto_exclude = ['id', 'created_at', 'updated_at', 'date_joined', 'last_login']
+            auto_exclude = ['id', 'created_at', 'updated_at', 'date_joined', 'last_login', 'assigned_at']
 
         exclude.extend(auto_exclude)
 
@@ -247,7 +371,7 @@ class FormGenerator:
         model_name = model_name or f"{table.name.title()}UpdateModel"
 
         # Exclude auto-managed fields
-        exclude = ['id', 'created_at', 'updated_at', 'date_joined']
+        exclude = ['id', 'created_at', 'updated_at', 'date_joined', 'assigned_at']
 
         fields = {}
         for column in table.columns:
